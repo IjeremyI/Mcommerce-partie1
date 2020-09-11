@@ -2,6 +2,7 @@ package com.ecommerce.microcommerce.web.controller;
 
 import com.ecommerce.microcommerce.dao.ProductDao;
 import com.ecommerce.microcommerce.model.Product;
+import com.ecommerce.microcommerce.web.exceptions.ProduitGratuitException;
 import com.ecommerce.microcommerce.web.exceptions.ProduitIntrouvableException;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -23,6 +25,10 @@ import java.util.List;
 
 @RestController
 public class ProductController {
+
+    private int getProductMarge(Product product){
+        return product.getPrix()-product.getPrixAchat();
+    }
 
     @Autowired
     private ProductDao productDao;
@@ -69,6 +75,9 @@ public class ProductController {
 
     public ResponseEntity<Void> ajouterProduit(@Valid @RequestBody Product product) {
 
+        if(product.getPrix()==0) {
+            throw new ProduitGratuitException("Le produit n'est pas gratuit!");
+        }
         Product productAdded =  productDao.save(product);
 
         if (productAdded == null)
@@ -86,7 +95,7 @@ public class ProductController {
     @DeleteMapping (value = "/Produits/{id}")
     public void supprimerProduit(@PathVariable int id) {
 
-        productDao.delete(id);
+        productDao.deleteById(id);
     }
 
     @PutMapping (value = "/Produits")
@@ -101,6 +110,26 @@ public class ProductController {
     public List<Product>  testeDeRequetes(@PathVariable int prix) {
 
         return productDao.chercherUnProduitCher(400);
+    }
+
+    @GetMapping(value = "test/produits/marge")
+    public String calculerMargeProduit(){
+        StringBuilder sb = new StringBuilder();
+        sb.append("<h1>Marge par produit :</h1></br></br>");
+        for (Product product : productDao.findAll()) {
+            sb.append(product.getNom() + " - marge=" + getProductMarge(product) + "</br>");
+        }
+        return sb.toString();
+    }
+
+    @GetMapping(value = "test/produits/tri")
+    public List<Product> trierProduitsParOrdreAlphabetique(){
+        /*List<Product> dl = productDao.findAll();
+        Collections.sort(dl, (d1,d2) -> {
+            return d1.getNom().compareTo(d2.getNom());
+        });
+        return dl;*/
+        return productDao.findAllByOrderByNomAsc();
     }
 
 
